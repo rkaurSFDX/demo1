@@ -1,0 +1,37 @@
+# This is a basic workflow that is manually triggered and parameterized
+# Update the environment variable SOURCE_PATH to the full patch of the package/file you would like to deploy
+
+name: Deploy Everything Manual
+
+on:
+  workflow_dispatch:
+      
+env:
+  SFDX_AUDIENCE_URL: https://test.salesforce.com
+  SALESFORCE_ORG_USERNAME: r.kaur@salesforce.com
+  SALESFORCE_ORG_URL: https://csg-devops-bootcamp--ndev1.sandbox.my.salesforce.com/
+  SALESFORCE_CONSUMER_KEY: ${{ secrets.SALESFORCE_CONSUMER_KEY }} # SFDX App consumer key from target org
+  JWTKEY: ${{ secrets.JWTKEY }} # JWT private key
+  SOURCE_PATH: force-app
+         
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2 # Checks out git repository
+      
+      - name: Install Salesforce CLI # Installing Salesforce CLI to run sfdx commands
+        shell: bash
+        run: |
+          npm install --global sfdx-cli
+          
+      - name: Authenticate Salesforce org # Authenticates Salesforce org utilizing JWT Bearer Flow
+        shell: bash
+        run: |
+          echo "${JWTKEY}" > server.key
+          sfdx force:auth:jwt:grant --jwtkeyfile server.key --clientid "${SALESFORCE_CONSUMER_KEY}" --username "${SALESFORCE_ORG_USERNAME}" --instanceurl "${SALESFORCE_ORG_URL}"
+          
+      - name: Deploy Package to Target Org # Deploys Salesforce components in package to target org
+        shell: bash
+        run: |
+          sfdx force:source:deploy -p "${SOURCE_PATH}" -u "${SALESFORCE_ORG_USERNAME}" -g --verbose
